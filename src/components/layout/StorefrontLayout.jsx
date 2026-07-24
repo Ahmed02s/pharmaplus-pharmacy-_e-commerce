@@ -26,6 +26,23 @@ export default function StorefrontLayout() {
     setUserMenuOpen(false)
   }
 
+  // 🚀 SMART LOGO NAVIGATION - Navigate based on user role
+  const handleLogoClick = () => {
+    if (!user) {
+      // Not logged in - go to homepage
+      navigate('/')
+    } else if (profile?.role === 'admin') {
+      // Admin - go to admin dashboard
+      navigate('/admin')
+    } else if (profile?.role === 'pharmacist') {
+      // Pharmacist - go to pharmacist portal
+      navigate('/pharmacist')
+    } else {
+      // Customer or default - go to home
+      navigate('/')
+    }
+  }
+
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/shop', label: 'Shop' },
@@ -44,13 +61,17 @@ export default function StorefrontLayout() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="page-container py-3">
           <div className="flex items-center gap-4">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            {/* Logo - UPDATED: Now clickable with smart navigation */}
+            <button 
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity active:scale-95"
+              title="Go to home or dashboard"
+            >
               <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center">
                 <Pill className="w-5 h-5 text-white" />
               </div>
               <span className="text-lg font-bold text-brand-700">PharmaPlus</span>
-            </Link>
+            </button>
 
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:flex">
