@@ -49,6 +49,17 @@ export default function DashboardLayout({ role }) {
     navigate('/')
   }
 
+  // 🚀 SMART LOGO NAVIGATION - Navigate based on role
+  const handleLogoClick = () => {
+    if (role === 'admin') {
+      navigate('/admin')
+    } else if (role === 'pharmacist') {
+      navigate('/pharmacist')
+    } else {
+      navigate('/account')
+    }
+  }
+
   const Sidebar = () => (
     <div className="flex flex-col h-full">
       {/* Portal header */}
@@ -106,12 +117,17 @@ export default function DashboardLayout({ role }) {
     <div className="flex min-h-screen bg-gray-50">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full top-0">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+        {/* Logo - UPDATED: Now clickable with smart navigation */}
+        <button 
+          onClick={handleLogoClick}
+          className="p-4 border-b border-gray-100 flex items-center gap-2 hover:opacity-80 transition-opacity active:scale-95"
+          title={`Go to ${ROLE_LABELS[role] || 'Dashboard'}`}
+        >
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
             <Pill className="w-4 h-4 text-white" />
           </div>
           <span className="font-bold text-brand-700">PharmaPlus</span>
-        </div>
+        </button>
         <Sidebar />
       </aside>
 
@@ -129,12 +145,17 @@ export default function DashboardLayout({ role }) {
       <div className="flex-1 lg:ml-64 flex flex-col">
         {/* Mobile topbar */}
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-2">
+          {/* Logo - UPDATED: Now clickable with smart navigation */}
+          <button 
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity active:scale-95"
+            title={`Go to ${ROLE_LABELS[role] || 'Dashboard'}`}
+          >
             <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
               <Pill className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-bold text-brand-700 text-sm">PharmaPlus</span>
-          </div>
+          </button>
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
             <Menu className="w-5 h-5" />
           </button>
