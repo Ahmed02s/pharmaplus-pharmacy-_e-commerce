@@ -56,17 +56,19 @@ function NotificationBell() {
   useEffect(() => {
     if (!user?.id) return
 
-    const channel = supabase
-      .channel(`notifications-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          toast.success(payload.new.title)
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
-        }
-      )
-      .subscribe()
+    const channelName = `notifications-${user.id}-${Date.now()}`
+    const channel = supabase.channel(channelName)
+
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      (payload) => {
+        toast.success(payload.new.title)
+        queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
+      }
+    )
+
+    channel.subscribe()
 
     return () => supabase.removeChannel(channel)
   }, [queryClient, user?.id])
