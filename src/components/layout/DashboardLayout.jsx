@@ -4,7 +4,12 @@ import {
   LayoutDashboard, ShoppingBag, FileText, Package, Users,
   LogOut, Pill, Tag, ChevronRight, Menu, X, Bell, ArrowLeft
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatDistanceToNowStrict } from 'date-fns'
+import { toast } from 'react-hot-toast'
+import { supabase } from '@/lib/supabase'
+import { getUserNotifications, markNotificationsRead } from '@/lib/notifications'
 
 const NAV_CONFIGS = {
   customer: [
@@ -30,6 +35,119 @@ const ROLE_LABELS = {
   customer: 'My Account',
   pharmacist: 'Pharmacist Portal',
   admin: 'Admin Panel',
+}
+
+function NotificationBell() {
+  const { user, profile } = useAuthStore()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: () => getUserNotifications({ user_id: user?.id, limit: 12 }),
+    enabled: Boolean(user?.id),
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: false,
+  })
+
+  const unreadCount = notifications.filter(notification => !notification.is_read).length
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          toast.success(payload.new.title)
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
+        }
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [queryClient, user?.id])
+
+  useEffect(() => {
+    if (!open || !user?.id) return
+    if (!notifications.some(notification => !notification.is_read)) return
+
+    markNotificationsRead(user.id)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['notifications', user.id] }))
+      .catch(console.error)
+  }, [open, notifications, queryClient, user?.id])
+
+  const handleNotificationClick = (notification) => {
+    setOpen(false)
+    const orderId = notification.data?.order_id
+    const baseRoute = profile?.role === 'customer' ? '/account/orders' : '/pharmacist/orders'
+    if (orderId) {
+      navigate(`${baseRoute}/${orderId}`)
+    } else {
+      navigate(baseRoute)
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        className="relative inline-flex items-center justify-center rounded-full border border-gray-200 bg-white p-2 text-gray-600 shadow-sm hover:bg-gray-50"
+        aria-label="Notifications"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[0.65rem] font-semibold text-white">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-50 mt-3 w-[22rem] overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Notifications</p>
+              <p className="text-xs text-gray-500">{unreadCount} unread</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                markNotificationsRead(user?.id)
+                  .then(() => queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }))
+                  .catch(console.error)
+              }}
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700"
+            >
+              Mark all read
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-4 text-sm text-gray-500">No notifications yet.</div>
+            ) : (
+              notifications.map(notification => (
+                <button
+                  key={notification.id}
+                  type="button"
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`w-full text-left px-4 py-3 transition-colors ${notification.is_read ? 'bg-white hover:bg-gray-50' : 'bg-brand-50 hover:bg-brand-100'}`}
+                >
+                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
+                  <p className="mt-2 text-xs text-gray-400">{formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function DashboardLayout({ role }) {
@@ -156,9 +274,16 @@ export default function DashboardLayout({ role }) {
             </div>
             <span className="font-bold text-brand-700 text-sm">PharmaPlus</span>
           </button>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
-            <Menu className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden lg:flex items-center justify-end border-b border-gray-200 bg-white px-8 py-4 sticky top-0 z-30">
+          <NotificationBell />
         </div>
 
         <div className="flex-1 p-4 lg:p-8">

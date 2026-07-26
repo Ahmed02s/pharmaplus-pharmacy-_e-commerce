@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { createNotification } from '@/lib/notifications'
 import { Search, ChevronDown, Package, MapPin, Phone } from 'lucide-react'
 import { Spinner, EmptyState, OrderStatusBadge, Modal } from '@/components/ui/LoadingScreen'
 import { toast } from 'react-hot-toast'
@@ -46,7 +47,7 @@ export default function PharmacistOrdersPage() {
       // notify customer
       const order = orders.find(o => o.id === id)
       if (order) {
-        await supabase.from('notifications').insert({
+        await createNotification({
           user_id: order.customer_id,
           type: 'order_update',
           title: `Order ${status.replace('_', ' ')}`,

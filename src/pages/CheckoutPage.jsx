@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
+import { notifyPharmacistsAndAdmins } from '@/lib/notifications'
 import { toast } from 'react-hot-toast'
 import { AlertCircle, Check, CreditCard, FileText, Lock, MapPin, Upload, X } from 'lucide-react'
 import { Spinner } from '@/components/ui/LoadingScreen'
@@ -159,6 +160,16 @@ export default function CheckoutPage() {
 
       if (result.error) throw result.error
 
+      try {
+        await notifyPharmacistsAndAdmins({
+          title: 'New order placed',
+          message: `Order #${orderId.slice(0, 8).toUpperCase()} is ready for processing.`,
+          data: { order_id: orderId },
+        })
+      } catch (notifyError) {
+        console.error('Failed to notify pharmacists:', notifyError)
+      }
+
       clearCart()
       setDemoReceipt({ ...receipt, status: 'success' })
       return
@@ -170,6 +181,16 @@ export default function CheckoutPage() {
 
     if (error) throw error
     if (!data?.ok) throw new Error(data?.error || 'Payment verification failed')
+
+    try {
+      await notifyPharmacistsAndAdmins({
+        title: 'New order placed',
+        message: `Order #${orderId.slice(0, 8).toUpperCase()} is ready for processing.`,
+        data: { order_id: orderId },
+      })
+    } catch (notifyError) {
+      console.error('Failed to notify pharmacists:', notifyError)
+    }
 
     clearCart()
     navigate('/order-success', { state: { orderId } })
