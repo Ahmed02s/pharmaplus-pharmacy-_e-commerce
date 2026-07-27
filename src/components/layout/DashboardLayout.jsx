@@ -10,6 +10,7 @@ import { formatDistanceToNowStrict } from 'date-fns'
 import { toast } from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { getUserNotifications, markNotificationsRead } from '@/lib/notifications'
+import PharmacistNotificationCenter from '../PharmacistNotificationCenter'
 
 const NAV_CONFIGS = {
   customer: [
